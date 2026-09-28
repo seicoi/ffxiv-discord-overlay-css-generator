@@ -338,13 +338,16 @@ ${member} {
   aspect-ratio: auto !important; overflow: visible !important;
 }
 ${member} > div.relative {
-  position: relative !important; display: block !important;
-  width: ${s.avatarSize}px !important; height: ${s.avatarSize}px !important;
+  position: relative !important; display: flex !important;
+  flex-direction: column !important; align-items: stretch !important;
+  justify-content: flex-start !important;
+  width: ${s.avatarSize}px !important; height: auto !important;
   max-width: none !important; max-height: none !important;
   aspect-ratio: auto !important; overflow: visible !important;
 }
 ${canvas} {
   display: block !important; box-sizing: border-box !important;
+  flex: 0 0 ${s.avatarSize}px !important;
   width: ${s.avatarSize}px !important; height: ${s.avatarSize}px !important;
   max-width: none !important; max-height: none !important;
   border: ${s.borderWidth}px solid ${s.borderColor} !important;
@@ -352,7 +355,9 @@ ${canvas} {
 }
 ${member} > div.relative > div.z-30 {
   display: ${s.showNames ? "block" : "none"} !important;
-  position: absolute !important; top: ${s.avatarSize + 5}px !important; left: 0 !important;
+  position: static !important; inset: auto !important;
+  flex: none !important; align-self: stretch !important;
+  margin: 5px 0 0 !important;
   box-sizing: border-box !important; width: ${s.avatarSize}px !important;
   height: ${s.nameSize + 9}px !important; padding: 2px 4px !important;
   border: 1px solid ${s.borderColor} !important;

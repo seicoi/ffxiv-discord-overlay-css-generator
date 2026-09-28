@@ -16,6 +16,8 @@ The generated selectors target the StreamKit classes `voice_container`, `voice_s
 
 Reactive's current embed script writes `data-discord-id` and `data-speaking` to each participant's outer `div`. It renders the avatar in a `canvas` and the name in an adjacent positioned element. The Reactive CSS output uses those attributes for slot identity and speaking state, and targets the observed parent structure for guest flow. This is a separate template because StreamKit selectors do not apply to Reactive. The Reactive page remained on its connection spinner in the Codex browser, so the live participant layout still needs OBS verification.
 
+An OBS screenshot showed the Reactive name strip overlapping the avatar. Reactive also sets inline positioning for the name according to its own placement setting. The generated CSS now places the canvas and name in a column and returns the name to normal flow, so the strip follows the avatar regardless of Reactive's placement coordinates. Recheck this against an active OBS source after future Reactive DOM changes.
+
 ## Preview and data
 
 The preview uses neutral avatar placeholders because the website has no permission to read Discord avatar images. Its role badge, separate name strip below each avatar, dimensions, and speaking effects approximate the generated CSS. Role names entered in the form only change the local preview; the CSS leaves Discord's own display name in StreamKit. Browser `localStorage` holds the editable configuration, and JSON import/export provides a portable copy. No network request sends the configuration.
