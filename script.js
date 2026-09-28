@@ -435,7 +435,7 @@ $("export-btn").addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "ffxiv-streamkit-settings.json";
+  link.download = "ffxiv-discord-overlay-settings.json";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   setStatus("storage-status", "設定JSONを保存しました");
