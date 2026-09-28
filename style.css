@@ -3,6 +3,8 @@
 .preview-member{gap:0}
 .preview-avatar{overflow:visible}
 .preview-name{position:absolute;z-index:1;left:3px;bottom:2px;max-width:calc(100% - 6px);padding:1px 3px;background:var(--preview-name-bg);color:#fff;font-weight:700;text-align:left}
+.preview-avatar{background:rgba(255,255,255,.045)}
+.preview-name{position:static;z-index:auto;display:block;width:100%;max-width:100%;height:calc(var(--preview-name-size,14px) + 9px);margin-top:5px;padding:2px 4px;border:1px solid var(--preview-border-color,#d6e0e1);background:rgba(0,0,0,.82);font-size:var(--preview-name-size,14px);line-height:1.2;text-shadow:none}
 .validation.valid{color:var(--accent)}
 
 /* Editorial dark treatment, inspired by the restrained grid and typography of

@@ -136,16 +136,15 @@ function validate() {
     if (duplicate) errors.push(`${member.role}: IDが重複しています`);
   });
   const missing = state.roles.filter(member => !member.id).map(member => member.role);
-  if (missing.length) errors.push(`ID未入力: ${missing.join(" / ")}`);
-  $("validation").textContent = errors.length ? errors.join(" ・ ") : "8人分のIDがそろいました。CSSをコピーできます。";
-  $("validation").classList.toggle("valid", errors.length === 0);
-  $("copy-btn").disabled = errors.length > 0;
-  return errors.length === 0;
-}
-
-function avatarLetters(name, fallback) {
-  const text = (name || fallback).trim();
-  return /^[\x00-\x7F]+$/.test(text) ? text.slice(0,2).toUpperCase() : text.slice(0,1);
+  const configured = state.roles.length - missing.length;
+  const canCopy = configured > 0 && errors.length === 0;
+  const guidance = configured === 0 ? "まず1人分のDiscordユーザーIDを入力してください。" :
+    missing.length ? `${configured}/8人を設定済み。未入力の位置は空欄です: ${missing.join(" / ")}` :
+    "8人分のIDがそろいました。CSSをコピーできます。";
+  $("validation").textContent = errors.length ? errors.join(" ・ ") : guidance;
+  $("validation").classList.toggle("valid", canCopy);
+  $("copy-btn").disabled = !canCopy;
+  return canCopy;
 }
 
 function renderPreview() {
@@ -177,8 +176,6 @@ function renderPreview() {
     if (speaking.has(index)) button.classList.add("speaking");
     const avatar = document.createElement("span");
     avatar.className = "preview-avatar";
-    avatar.style.setProperty("--avatar-bg", ["#576470","#4a5d68","#435965","#5c596b","#67545c","#4a536c","#536570","#595867","#56615d","#5d5767","#566370"][index]);
-    avatar.textContent = avatarLetters(member.name, member.role || "G");
     if (member.role) {
       const badge = document.createElement("span");
       badge.className = "preview-role";
@@ -191,7 +188,7 @@ function renderPreview() {
       const name = document.createElement("span");
       name.className = "preview-name";
       name.textContent = member.name || member.role || "Guest";
-      avatar.append(name);
+      button.append(name);
     }
     host.append(button);
   });
@@ -215,8 +212,8 @@ function generateCSS() {
    Slots: MT ST PH BH D1 D2 D3 D4 | guests follow on the right
    Based on StreamKit's stable classes: voice_states, voice_state,
    voice_avatar, voice_username and wrapper_speaking. */
-body { margin: 0 !important; background: transparent !important; overflow: hidden; }
-.voice_container { width: max-content !important; max-width: none !important; overflow: visible !important; }
+html, body { margin: 0 !important; background: transparent !important; overflow: hidden; }
+.voice_container { width: max-content !important; max-width: none !important; background: transparent !important; overflow: visible !important; }
 ul.voice_states {
   position: relative !important;
   display: flex !important;
@@ -224,7 +221,7 @@ ul.voice_states {
   align-items: flex-start !important;
   gap: ${s.gap}px !important;
   width: max-content !important;
-  min-height: ${s.avatarSize + s.nameSize + 10}px !important;
+  min-height: ${s.avatarSize + s.nameSize + 18}px !important;
   margin: 4px 0 0 4px !important;
   padding: 0 0 0 ${8 * step}px !important;
   list-style: none !important;
@@ -235,10 +232,12 @@ li.voice_state {
   flex: 0 0 ${s.avatarSize}px !important;
   box-sizing: border-box !important;
   width: ${s.avatarSize}px !important;
-  height: ${s.avatarSize + s.nameSize + 10}px !important;
+  height: ${s.avatarSize + s.nameSize + 18}px !important;
   margin: 0 !important;
   padding: 0 !important;
   opacity: 1 !important;
+  background: transparent !important;
+  overflow: visible !important;
   transform-origin: center ${Math.round(s.avatarSize / 2)}px;
 }
 li.voice_state > img.voice_avatar {
@@ -254,24 +253,32 @@ li.voice_state > img.voice_avatar {
   box-shadow: none !important;
 }
 .voice_username {
+  display: ${s.showNames ? "block" : "none"} !important;
   position: absolute !important;
   z-index: 1;
-  top: ${s.avatarSize - s.nameSize - 12}px !important;
-  left: 3px !important;
-  width: calc(100% - 6px) !important;
-  padding: 0 !important;
-  line-height: 1.15 !important;
+  top: ${s.avatarSize + 5}px !important;
+  left: 0 !important;
+  box-sizing: border-box !important;
+  width: ${s.avatarSize}px !important;
+  height: ${s.nameSize + 9}px !important;
+  padding: 2px 4px !important;
+  border: 1px solid ${s.borderColor} !important;
+  background: rgba(0,0,0,.82) !important;
+  color: #fff !important;
+  font-size: ${s.nameSize}px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
   overflow: hidden !important;
   white-space: nowrap !important;
 }
 .voice_username span {
   display: ${s.showNames ? "inline-block" : "none"} !important;
   max-width: 100%;
-  padding: 1px 3px !important;
+  padding: 0 !important;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #fff !important;
-  background: rgba(0,0,0,.58) !important;
+  background: transparent !important;
   border-radius: 0 !important;
   font-size: ${s.nameSize}px !important;
   font-weight: 700;
@@ -290,6 +297,7 @@ function update() {
   const css = generateCSS();
   $("css-output").value = css;
   $("css-lines").textContent = `${css.trim().split("\n").length} lines`;
+  $("obs-width").textContent = `${11 * (state.avatarSize + state.gap) + 8}px`;
   saveState();
 }
 
@@ -325,13 +333,16 @@ $("preview").addEventListener("click", event => {
 });
 $("copy-btn").addEventListener("click", async () => {
   if (!validate()) return;
+  const output = $("css-output");
   try {
-    await navigator.clipboard.writeText($("css-output").value);
+    if (!navigator.clipboard?.writeText) throw new Error("clipboard-unavailable");
+    await navigator.clipboard.writeText(output.value);
     setStatus("copy-status", "CSSをコピーしました");
   } catch {
-    $("css-output").select();
+    output.focus();
+    output.select();
     const done = document.execCommand("copy");
-    setStatus("copy-status", done ? "CSSをコピーしました" : "コピーできませんでした。テキストを手動でコピーしてください。");
+    setStatus("copy-status", done ? "CSSをコピーしました" : "自動コピーできませんでした。選択されたCSSをCtrl+Cでコピーしてください。");
   }
 });
 $("save-btn").addEventListener("click", () => saveState("設定を保存しました"));
