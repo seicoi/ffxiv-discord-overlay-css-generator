@@ -3,6 +3,7 @@
 const ROLES = ["MT", "ST", "PH", "BH", "D1", "D2", "D3", "D4"];
 const STORAGE_KEY = "ffxiv-streamkit-generator-v1";
 const DEFAULTS = {
+  provider: "streamkit",
   roles: ROLES.map(role => ({ role, id: "", name: "", present: true })),
   avatarSize: 104, gap: 14, borderWidth: 3, borderColor: "#e5eeee",
   nameSize: 14, labelSize: 15, tankBg: "#315aa5", healerBg: "#298647", dpsBg: "#ac3032", radius: 0,
@@ -23,6 +24,7 @@ const speaking = new Set();
 function cleanState(raw) {
   const clean = copy(DEFAULTS);
   if (!raw || typeof raw !== "object") return clean;
+  if (["streamkit", "reactive"].includes(raw.provider)) clean.provider = raw.provider;
   if (Array.isArray(raw.roles)) {
     ROLES.forEach((role, index) => {
       const found = raw.roles.find(item => item && item.role === role) || raw.roles[index];
@@ -194,7 +196,7 @@ function renderPreview() {
   });
 }
 
-function generateCSS() {
+function generateStreamkitCSS() {
   const s = state;
   const step = s.avatarSize + s.gap;
   const roleRules = s.roles.filter(member => /^\d{17,20}$/.test(member.id)).map(member => {
@@ -290,11 +292,93 @@ ${effect}
 `;
 }
 
+function generateReactiveCSS() {
+  const s = state;
+  const step = s.avatarSize + s.gap;
+  const member = '#embed div[data-discord-id]';
+  const canvas = `${member} > div.relative > canvas`;
+  const roleRules = s.roles.filter(item => /^\d{17,20}$/.test(item.id)).map(item => {
+    const index = ROLES.indexOf(item.role);
+    const selector = `#embed div[data-discord-id="${item.id}"]`;
+    return `/* ${item.role} */\n${selector} { position: absolute !important; left: ${index * step}px !important; top: 0 !important; }\n${selector}::before {\n  content: "${item.role}"; position: absolute; z-index: 50; top: -4px; left: -4px;\n  min-width: 28px; padding: 0 5px; text-align: center;\n  color: #fff; background: ${roleColor(item.role)};\n  font-size: ${s.labelSize}px; font-weight: 800; line-height: 1.25;\n}`;
+  }).join("\n");
+  const effect = {
+    glow: `${member}[data-speaking="true"] > div.relative > canvas { box-shadow: 0 0 ${s.glowStrength}px ${s.glowColor} !important; }`,
+    glowThick: `${member}[data-speaking="true"] > div.relative > canvas { border-width: ${s.talkBorderWidth}px !important; box-shadow: 0 0 ${s.glowStrength}px ${s.glowColor} !important; }`,
+    bounce: `${member}[data-speaking="true"] { animation: ffxiv-bounce ${s.speed}s ease-in-out infinite !important; }\n@keyframes ffxiv-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-${s.moveAmount}px); } }`,
+    scale: `${member}[data-speaking="true"] { animation: ffxiv-scale ${s.speed}s ease-in-out infinite alternate !important; }\n@keyframes ffxiv-scale { from { transform: scale(1); } to { transform: scale(${s.scale}); } }`
+  }[s.effect];
+  return `/* FFXIV Discord Reactive — OBS Custom CSS
+   Use with the Reactive custom source URL and Show names enabled.
+   Disable Only speaking so non-speaking members stay in the DOM.
+   Selectors observed in Reactive's embed script: data-discord-id,
+   data-speaking, canvas and the adjacent name element. */
+html, body, #embed { margin: 0 !important; background: transparent !important; overflow: hidden !important; }
+#embed .h-screen { justify-content: flex-start !important; align-items: flex-start !important; }
+#embed .h-screen > div.flex {
+  width: max-content !important; height: auto !important;
+  max-width: none !important; max-height: none !important;
+  aspect-ratio: auto !important; justify-content: flex-start !important;
+  align-items: flex-start !important;
+}
+#embed .h-screen > div.flex > div.flex {
+  position: relative !important; display: flex !important;
+  flex-direction: row !important; flex-wrap: nowrap !important;
+  align-items: flex-start !important; justify-content: flex-start !important;
+  gap: ${s.gap}px !important; width: max-content !important;
+  height: ${s.avatarSize + s.nameSize + 18}px !important;
+  padding: 4px 0 0 ${8 * step + 4}px !important;
+  aspect-ratio: auto !important; overflow: visible !important;
+}
+${member} {
+  position: relative; display: block !important;
+  flex: 0 0 ${s.avatarSize}px !important;
+  width: ${s.avatarSize}px !important; height: ${s.avatarSize + s.nameSize + 18}px !important;
+  max-width: none !important; max-height: none !important;
+  aspect-ratio: auto !important; overflow: visible !important;
+}
+${member} > div.relative {
+  position: relative !important; display: block !important;
+  width: ${s.avatarSize}px !important; height: ${s.avatarSize}px !important;
+  max-width: none !important; max-height: none !important;
+  aspect-ratio: auto !important; overflow: visible !important;
+}
+${canvas} {
+  display: block !important; box-sizing: border-box !important;
+  width: ${s.avatarSize}px !important; height: ${s.avatarSize}px !important;
+  max-width: none !important; max-height: none !important;
+  border: ${s.borderWidth}px solid ${s.borderColor} !important;
+  border-radius: ${s.radius}px !important; box-shadow: none !important;
+}
+${member} > div.relative > div.z-30 {
+  display: ${s.showNames ? "block" : "none"} !important;
+  position: absolute !important; top: ${s.avatarSize + 5}px !important; left: 0 !important;
+  box-sizing: border-box !important; width: ${s.avatarSize}px !important;
+  height: ${s.nameSize + 9}px !important; padding: 2px 4px !important;
+  border: 1px solid ${s.borderColor} !important;
+  background: rgba(0,0,0,.82) !important; color: #fff !important;
+  font-size: ${s.nameSize}px !important; font-weight: 700 !important;
+  line-height: 1.2 !important; text-align: left !important;
+  -webkit-text-stroke-width: 0 !important;
+  white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
+}
+${roleRules}
+${effect}
+`;
+}
+
+function generateCSS() {
+  return state.provider === "reactive" ? generateReactiveCSS() : generateStreamkitCSS();
+}
+
 function update() {
   document.querySelectorAll(".role-pill").forEach((pill,index) => { pill.style.backgroundColor = roleColor(ROLES[index]); });
   validate();
   renderPreview();
   const css = generateCSS();
+  $("output-help").textContent = state.provider === "reactive" ?
+    "OBSでDiscord ReactiveのCustom Source URLを設定したブラウザソースを開き、同じソースの「カスタムCSS」欄を生成CSSの全文で置き換えてください。Reactive側では名前を表示し、発話中の人だけを表示する設定をオフにします。" :
+    "OBSでStreamKitのVoice Widget URLを設定したブラウザソースを開き、同じソースの「カスタムCSS」欄を生成CSSの全文で置き換えてください。適用後はソースのキャッシュを更新します。";
   $("css-output").value = css;
   $("css-lines").textContent = `${css.trim().split("\n").length} lines`;
   $("obs-width").textContent = `${11 * (state.avatarSize + state.gap) + 8}px`;

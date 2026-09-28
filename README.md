@@ -1,12 +1,12 @@
 # FFXIV Discord Overlay CSS Generator
 
-Discord StreamKit の Voice Widget を OBS で使うためのカスタムCSSを作成するWebサイトです。MT・ST・PH・BH・D1～D4をDiscordユーザーIDで固定し、VCへの参加順が変わっても同じ位置に表示できます。
+Discord StreamKit と Discord Reactive を OBS で使うためのカスタムCSSを作成するWebサイトです。MT・ST・PH・BH・D1～D4をDiscordユーザーIDで固定し、VCへの参加順が変わっても同じ位置に表示できます。
 
 **[ジェネレーターを開く](https://seicoi.github.io/ffxiv-discord-overlay-css-generator/)**
 
 ## 準備するもの
 
-- OBS のブラウザソースに設定する [Discord StreamKit](https://streamkit.discord.com/overlay) の Voice Widget URL
+- OBS のブラウザソースに設定する [Discord StreamKit](https://streamkit.discord.com/overlay) の Voice Widget URL、または [Discord Reactive](https://reactive.fugi.tech/) の Custom Source URL
 - 固定したいメンバーの Discord ユーザーID（17～20桁の数字）。1人分から試せます。
 
 Discord の「設定 → 詳細設定」で開発者モードを有効にすると、ユーザーの右クリックメニューからIDをコピーできます。
@@ -14,27 +14,27 @@ Discord の「設定 → 詳細設定」で開発者モードを有効にする�
 ## OBSへの設定
 
 1. ジェネレーターで MT から D4 までのユーザーIDを入力します。1人分を入力した時点でCSSをコピーできます。「表示確認用の名前」はサイト内のプレビューに使う項目で、OBS上の名前はDiscord側の表示名です。
-2. 必要に応じてサイズ、枠色、発話時のエフェクトを調整し、「CSSをコピー」を押します。
-3. OBSで **StreamKit の Voice Widget URLを設定したブラウザソース** のプロパティを開きます。
+2. 「生成CSS」で出力先を選び、必要に応じてサイズ、枠色、発話時のエフェクトを調整して「CSSをコピー」を押します。
+3. OBSで **選んだ出力先のURLを設定したブラウザソース** のプロパティを開きます。
 4. そのソースの「カスタムCSS」欄を、コピーしたCSSの全文で置き換えて保存します。ジェネレーターのURLはOBSのソースURLには設定しません。
 5. 「現在のページのキャッシュを更新」を実行し、VCに参加して表示を確認します。
 
-StreamKit 側では名前を表示し、発話中の人だけを表示する設定をオフにしてください。OBSブラウザソースの幅は、サイトの「生成CSS」に表示される目安以上に設定します。初期設定でGuestを3人まで見せる場合は約1300pxです。
+StreamKit 側では名前を表示し、発話中の人だけを表示する設定をオフにしてください。Reactive 側でも名前を表示し、「Only speaking」をオフにします。OBSブラウザソースの幅は、サイトの「生成CSS」に表示される目安以上に設定します。初期設定でGuestを3人まで見せる場合は約1300pxです。
 
 ## 表示について
 
 - 固定メンバーがVCにいないとき、その人の位置は空欄になります。
 - 固定メンバー以外はD4の右側にGuestとして並びます。Guestにはロールラベルを付けません。
-- サイトのプレビューは配置と見た目の確認用です。実際のアバター画像とDiscord上の名前はStreamKitから取得されます。
+- サイトのプレビューは配置と見た目の確認用です。実際のアバター画像と名前は、OBSで使用する出力先から取得されます。
 - 名前はアバターの下に独立した帯として表示されます。
 - 入力内容は利用中のブラウザに自動保存されます。JSONのエクスポート・インポートで別の端末に移せます。ユーザーIDをこのサイトから送信する処理はありません。
 
 ## CSSが反映されないとき
 
-1. OBSのソースURLが `streamkit.discord.com/overlay/voice/…` であり、その**同じソース**の「カスタムCSS」に全文を貼っているか確認してください。
+1. サイトの出力先とOBSのソースURLが一致し、その**同じソース**の「カスタムCSS」に全文を貼っているか確認してください。
 2. OBSの「現在のページのキャッシュを更新」を実行してください。
 3. ブラウザソースの幅を確認してください。狭い場合は右側の枠が見切れます。
 4. 一時的に「カスタムCSS」を `body { outline: 20px solid magenta !important; }` に置き換えて、枠が出るか確認してください。枠が出なければCSSがそのソースに読み込まれていません。確認後は生成CSSに戻してください。
-5. 枠は出るのに配置が変わらない場合、入力したユーザーIDとVC参加者のIDが一致しているか確認してください。
+5. 枠は出るのに配置が変わらない場合、入力したユーザーIDとVC参加者のIDが一致しているか確認してください。Reactive の場合は、Custom Sourceの設定にその参加者が含まれるかも確認します。
 
 不具合を報告する場合は、OBSで見えている画面、ブラウザソースの幅、CSSテストの結果を添えてください。ユーザーIDやVoice Widget URLを公開のIssueへ貼る必要はありません。

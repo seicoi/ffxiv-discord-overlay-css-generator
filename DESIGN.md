@@ -4,7 +4,7 @@ The public README is a usage guide. This file records the implementation choices
 
 ## Source boundary
 
-The website generates text for the OBS Browser Source **Custom CSS** field. The OBS source itself loads Discord StreamKit's Voice Widget URL. The website does not connect to Discord and does not render the live overlay.
+The website generates text for the OBS Browser Source **Custom CSS** field. The OBS source itself loads either Discord StreamKit's Voice Widget URL or Discord Reactive's Custom Source URL. The website does not connect to Discord and does not render the live overlay. The user-provided Reactive URL is not stored in source files.
 
 ## Fixed slots
 
@@ -13,6 +13,8 @@ Eight role IDs map to absolute horizontal positions in the order MT, ST, PH, BH,
 The copy action is available as soon as one valid ID is present. Missing IDs are guidance rather than validation errors, so a single participant can be used to test the OBS source before the full party is configured.
 
 The generated selectors target the StreamKit classes `voice_container`, `voice_states`, `voice_state`, `voice_avatar`, `voice_username`, and `wrapper_speaking`, plus `data-userid` on the participant element. These selectors must be checked again if Discord changes the widget markup.
+
+Reactive's current embed script writes `data-discord-id` and `data-speaking` to each participant's outer `div`. It renders the avatar in a `canvas` and the name in an adjacent positioned element. The Reactive CSS output uses those attributes for slot identity and speaking state, and targets the observed parent structure for guest flow. This is a separate template because StreamKit selectors do not apply to Reactive. The Reactive page remained on its connection spinner in the Codex browser, so the live participant layout still needs OBS verification.
 
 ## Preview and data
 
