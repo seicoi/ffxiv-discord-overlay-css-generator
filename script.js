@@ -318,7 +318,7 @@ function generateReactiveCSS() {
     const selector = `#embed div[data-discord-id="${item.id}"]`;
     const name = item.name.trim();
     const nameRule = name ? `\n${selector} > div.relative > div.z-30 { font-size: 0 !important; }\n${selector} > div.relative > div.z-30::after {\n  content: ${cssString(name)}; display: block;\n  font-size: ${s.nameSize}px; line-height: 1.2;\n}` : "";
-    return `/* ${item.role} */\n${selector} { position: absolute !important; left: ${index * step}px !important; top: 0 !important; }\n${selector}::before {\n  content: "${item.role}"; position: absolute; z-index: 50; top: -4px; left: -4px;\n  min-width: 28px; padding: 0 5px; text-align: center;\n  color: #fff; background: ${roleColor(item.role)};\n  font-size: ${s.labelSize}px; font-weight: 800; line-height: 1.25;\n}${nameRule}`;
+    return `/* ${item.role} */\n${selector} { position: absolute !important; left: ${index * step}px !important; top: ${topSpace}px !important; }\n${selector}::before {\n  content: "${item.role}"; position: absolute; z-index: 50; top: -4px; left: -4px;\n  min-width: 28px; padding: 0 5px; text-align: center;\n  color: #fff; background: ${roleColor(item.role)};\n  font-size: ${s.labelSize}px; font-weight: 800; line-height: 1.25;\n}${nameRule}`;
   }).join("\n");
   const effect = {
     glow: `${member}[data-speaking="true"] > div.relative > canvas { box-shadow: 0 0 ${s.glowStrength}px ${s.glowColor} !important; }`,

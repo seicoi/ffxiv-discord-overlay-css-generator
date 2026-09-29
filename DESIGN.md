@@ -18,6 +18,8 @@ Reactive's current embed script writes `data-discord-id` and `data-speaking` to 
 
 OBS screenshots showed the Reactive name strip overlapping the avatar, then the avatar image compressed vertically after the name was placed in normal flow. Reactive reads the canvas parent element's bounding box to set its drawing surface. The generated CSS therefore keeps that parent square and absolutely positions the name below it using `top: calc(100% + 5px)` while overriding Reactive's inline placement coordinates. Recheck this against an active OBS source after future Reactive DOM changes.
 
+Reactive reserves vertical space above the avatar row for the bounce effect with top padding on the flex container. Guests participate in that flex layout, but fixed roles are absolutely positioned. Their `top` value must include the same padding; otherwise guests appear lower than the eight fixed slots.
+
 ## Preview and data
 
 The preview uses neutral avatar placeholders because the website has no permission to read Discord avatar images. Its role badge, separate name strip below each avatar, dimensions, and speaking effects approximate the generated CSS. A nonempty role name creates a CSS text override for that user's StreamKit or Reactive name element; an empty name leaves the provider's display name. The override is escaped as a CSS string. The bounce effect targets only the avatar image or canvas, keeping the name strip anchored. Browser `localStorage` holds the editable configuration, and JSON import/export provides a portable copy. No network request sends the configuration.
