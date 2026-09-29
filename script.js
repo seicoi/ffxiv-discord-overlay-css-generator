@@ -3,18 +3,19 @@
 const ROLES = ["MT", "ST", "PH", "BH", "D1", "D2", "D3", "D4"];
 const STORAGE_KEY = "ffxiv-streamkit-generator-v1";
 const DEFAULTS = {
+  settingsVersion: 2,
   provider: "streamkit",
   roles: ROLES.map(role => ({ role, id: "", name: "", present: true })),
   avatarSize: 104, gap: 14, borderWidth: 3, borderColor: "#e5eeee",
   nameSize: 14, labelSize: 15, tankBg: "#315aa5", healerBg: "#298647", dpsBg: "#ac3032", radius: 0,
   showNames: true, effect: "glow", glowColor: "#72e2bf", glowStrength: 18,
-  talkBorderWidth: 6, moveAmount: 4, speed: 0.7, scale: 1.04
+  talkBorderWidth: 6, moveAmount: 10, speed: 0.5, scale: 1.04
 };
 const NUMERIC = {
   avatarSize: [48,160], gap: [0,48], borderWidth: [1,8],
   nameSize: [10,24], labelSize: [10,24], radius: [0,24],
-  glowStrength: [4,40], talkBorderWidth: [2,12], moveAmount: [2,8],
-  speed: [0.3,1.5], scale: [1.02,1.05]
+  glowStrength: [4,40], talkBorderWidth: [2,12], moveAmount: [5,15],
+  speed: [0.1,1.5], scale: [1.02,1.05]
 };
 const $ = id => document.getElementById(id);
 const copy = value => JSON.parse(JSON.stringify(value));
@@ -37,6 +38,10 @@ function cleanState(raw) {
   for (const [key, [min, max]] of Object.entries(NUMERIC)) {
     const value = Number(raw[key]);
     if (Number.isFinite(value)) clean[key] = Math.min(max, Math.max(min, value));
+  }
+  if (!raw.settingsVersion && Number(raw.moveAmount) === 4 && Number(raw.speed) === 0.7) {
+    clean.moveAmount = DEFAULTS.moveAmount;
+    clean.speed = DEFAULTS.speed;
   }
   for (const key of ["borderColor", "tankBg", "healerBg", "dpsBg", "glowColor"]) {
     if (typeof raw[key] === "string" && /^#[\da-fA-F]{6}$/.test(raw[key])) clean[key] = raw[key];
@@ -66,13 +71,17 @@ function roleColor(role) {
   return role.startsWith("D") ? state.dpsBg : ["PH", "BH"].includes(role) ? state.healerBg : state.tankBg;
 }
 
+function cssString(value) {
+  return `"${value.replace(/[\\"\u0000-\u001f\u007f]/g, char => `\\${char.codePointAt(0).toString(16)} `)}"`;
+}
+
 function createRoleCards() {
   const grid = $("role-grid");
   grid.replaceChildren();
   state.roles.forEach((member, index) => {
     const card = document.createElement("div");
     card.className = "role-card";
-    card.innerHTML = `<div class="role-card-head"><span class="role-pill">${member.role}</span><span class="role-index">SLOT ${String(index + 1).padStart(2,"0")}</span></div><label>DiscordユーザーID<input type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="17～20桁の数字" data-index="${index}" data-role-field="id"></label><label>表示確認用の名前<input type="text" maxlength="40" placeholder="プレビュー用" data-index="${index}" data-role-field="name"></label><label class="presence"><input type="checkbox" data-index="${index}" data-role-field="present"><span>プレビューで表示</span></label>`;
+    card.innerHTML = `<div class="role-card-head"><span class="role-pill">${member.role}</span><span class="role-index">SLOT ${String(index + 1).padStart(2,"0")}</span></div><label>DiscordユーザーID<input type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="17～20桁の数字" data-index="${index}" data-role-field="id"></label><label>表示名（空欄はDiscord名）<input type="text" maxlength="40" placeholder="任意の表示名" data-index="${index}" data-role-field="name"></label><label class="presence"><input type="checkbox" data-index="${index}" data-role-field="present"><span>プレビューで表示</span></label>`;
     card.querySelector(".role-pill").style.backgroundColor = roleColor(member.role);
     card.querySelector('[data-role-field="id"]').value = member.id;
     card.querySelector('[data-role-field="name"]').value = member.name;
@@ -85,7 +94,7 @@ function effectControls() {
   const definitions = {
     glow: [["glowColor","発光色","color"],["glowStrength","発光強度","range",4,40,1,"px"]],
     glowThick: [["glowColor","発光色","color"],["glowStrength","発光強度","range",4,40,1,"px"],["talkBorderWidth","発話時の枠幅","range",2,12,1,"px"]],
-    bounce: [["moveAmount","移動量","range",2,8,1,"px"],["speed","速度","range",0.3,1.5,0.1,"秒"]],
+    bounce: [["moveAmount","移動量","range",5,15,1,"px"],["speed","速度","range",0.1,1,0.1,"秒"]],
     scale: [["scale","倍率","range",1.02,1.05,0.01,"倍"],["speed","速度","range",0.3,1.5,0.1,"秒"]]
   };
   const host = $("effect-controls");
@@ -107,6 +116,8 @@ function effectControls() {
     input.type = type;
     if (type === "range") Object.assign(input, {min, max, step});
     input.value = state[key];
+    if (type === "range") state[key] = Number(input.value);
+    if (type === "range") caption.querySelector("output").textContent = `${state[key]}${unit}`;
     wrapper.append(caption,input);
     host.append(wrapper);
   });
@@ -199,14 +210,18 @@ function renderPreview() {
 function generateStreamkitCSS() {
   const s = state;
   const step = s.avatarSize + s.gap;
+  const topSpace = s.effect === "bounce" ? s.moveAmount + 4 : 4;
   const roleRules = s.roles.filter(member => /^\d{17,20}$/.test(member.id)).map(member => {
     const index = ROLES.indexOf(member.role);
-    return `/* ${member.role} */\nli.voice_state[data-userid="${member.id}"] {\n  position: absolute !important;\n  left: ${index * step}px !important;\n  top: 0 !important;\n}\nli.voice_state[data-userid="${member.id}"]::before {\n  content: "${member.role}";\n  position: absolute; z-index: 2; top: -4px; left: -4px;\n  padding: 0 5px; min-width: 28px; text-align: center;\n  color: #fff; background: ${roleColor(member.role)};\n  font-size: ${s.labelSize}px; font-weight: 800; line-height: 1.25;\n}\n`;
+    const selector = `li.voice_state[data-userid="${member.id}"]`;
+    const name = member.name.trim();
+    const nameRule = name ? `${selector} .voice_username span { display: none !important; }\n${selector} .voice_username::after {\n  content: ${cssString(name)}; display: block;\n  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;\n  font-size: ${s.nameSize}px; line-height: 1.2;\n}\n` : "";
+    return `/* ${member.role} */\n${selector} {\n  position: absolute !important;\n  left: ${index * step}px !important;\n  top: 0 !important;\n}\n${selector}::before {\n  content: "${member.role}";\n  position: absolute; z-index: 2; top: -4px; left: -4px;\n  padding: 0 5px; min-width: 28px; text-align: center;\n  color: #fff; background: ${roleColor(member.role)};\n  font-size: ${s.labelSize}px; font-weight: 800; line-height: 1.25;\n}\n${nameRule}`;
   }).join("\n");
   const effect = {
     glow: `li.voice_state.wrapper_speaking > img.voice_avatar {\n  box-shadow: 0 0 ${s.glowStrength}px ${s.glowColor} !important;\n}`,
     glowThick: `li.voice_state.wrapper_speaking > img.voice_avatar {\n  border-width: ${s.talkBorderWidth}px !important;\n  box-shadow: 0 0 ${s.glowStrength}px ${s.glowColor} !important;\n}`,
-    bounce: `li.voice_state.wrapper_speaking {\n  animation: ffxiv-bounce ${s.speed}s ease-in-out infinite;\n}\n@keyframes ffxiv-bounce {\n  0%,100% { transform: translateY(0); }\n  50% { transform: translateY(-${s.moveAmount}px); }\n}`,
+    bounce: `li.voice_state.wrapper_speaking > img.voice_avatar {\n  animation: ffxiv-bounce ${s.speed}s ease-in-out infinite !important;\n}\n@keyframes ffxiv-bounce {\n  0%,100% { transform: translateY(0); }\n  50% { transform: translateY(-${s.moveAmount}px); }\n}`,
     scale: `li.voice_state.wrapper_speaking {\n  animation: ffxiv-scale ${s.speed}s ease-in-out infinite alternate;\n}\n@keyframes ffxiv-scale {\n  from { transform: scale(1); }\n  to { transform: scale(${s.scale}); }\n}`
   }[s.effect];
   return `/* FFXIV Discord StreamKit Overlay — OBS Custom CSS
@@ -224,7 +239,7 @@ ul.voice_states {
   gap: ${s.gap}px !important;
   width: max-content !important;
   min-height: ${s.avatarSize + s.nameSize + 18}px !important;
-  margin: 4px 0 0 4px !important;
+  margin: ${topSpace}px 0 0 4px !important;
   padding: 0 0 0 ${8 * step}px !important;
   list-style: none !important;
   overflow: visible !important;
@@ -295,17 +310,20 @@ ${effect}
 function generateReactiveCSS() {
   const s = state;
   const step = s.avatarSize + s.gap;
+  const topSpace = s.effect === "bounce" ? s.moveAmount + 4 : 4;
   const member = '#embed div[data-discord-id]';
   const canvas = `${member} > div.relative > canvas`;
   const roleRules = s.roles.filter(item => /^\d{17,20}$/.test(item.id)).map(item => {
     const index = ROLES.indexOf(item.role);
     const selector = `#embed div[data-discord-id="${item.id}"]`;
-    return `/* ${item.role} */\n${selector} { position: absolute !important; left: ${index * step}px !important; top: 0 !important; }\n${selector}::before {\n  content: "${item.role}"; position: absolute; z-index: 50; top: -4px; left: -4px;\n  min-width: 28px; padding: 0 5px; text-align: center;\n  color: #fff; background: ${roleColor(item.role)};\n  font-size: ${s.labelSize}px; font-weight: 800; line-height: 1.25;\n}`;
+    const name = item.name.trim();
+    const nameRule = name ? `\n${selector} > div.relative > div.z-30 { font-size: 0 !important; }\n${selector} > div.relative > div.z-30::after {\n  content: ${cssString(name)}; display: block;\n  font-size: ${s.nameSize}px; line-height: 1.2;\n}` : "";
+    return `/* ${item.role} */\n${selector} { position: absolute !important; left: ${index * step}px !important; top: 0 !important; }\n${selector}::before {\n  content: "${item.role}"; position: absolute; z-index: 50; top: -4px; left: -4px;\n  min-width: 28px; padding: 0 5px; text-align: center;\n  color: #fff; background: ${roleColor(item.role)};\n  font-size: ${s.labelSize}px; font-weight: 800; line-height: 1.25;\n}${nameRule}`;
   }).join("\n");
   const effect = {
     glow: `${member}[data-speaking="true"] > div.relative > canvas { box-shadow: 0 0 ${s.glowStrength}px ${s.glowColor} !important; }`,
     glowThick: `${member}[data-speaking="true"] > div.relative > canvas { border-width: ${s.talkBorderWidth}px !important; box-shadow: 0 0 ${s.glowStrength}px ${s.glowColor} !important; }`,
-    bounce: `${member}[data-speaking="true"] { animation: ffxiv-bounce ${s.speed}s ease-in-out infinite !important; }\n@keyframes ffxiv-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-${s.moveAmount}px); } }`,
+    bounce: `${member}[data-speaking="true"] > div.relative > canvas { animation: ffxiv-bounce ${s.speed}s ease-in-out infinite !important; }\n@keyframes ffxiv-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-${s.moveAmount}px); } }`,
     scale: `${member}[data-speaking="true"] { animation: ffxiv-scale ${s.speed}s ease-in-out infinite alternate !important; }\n@keyframes ffxiv-scale { from { transform: scale(1); } to { transform: scale(${s.scale}); } }`
   }[s.effect];
   return `/* FFXIV Discord Reactive — OBS Custom CSS
@@ -326,8 +344,8 @@ html, body, #embed { margin: 0 !important; background: transparent !important; o
   flex-direction: row !important; flex-wrap: nowrap !important;
   align-items: flex-start !important; justify-content: flex-start !important;
   gap: ${s.gap}px !important; width: max-content !important;
-  height: ${s.avatarSize + s.nameSize + 18}px !important;
-  padding: 4px 0 0 ${8 * step + 4}px !important;
+  height: ${s.avatarSize + s.nameSize + 18 + topSpace - 4}px !important;
+  padding: ${topSpace}px 0 0 ${8 * step + 4}px !important;
   aspect-ratio: auto !important; overflow: visible !important;
 }
 ${member} {
@@ -338,16 +356,13 @@ ${member} {
   aspect-ratio: auto !important; overflow: visible !important;
 }
 ${member} > div.relative {
-  position: relative !important; display: flex !important;
-  flex-direction: column !important; align-items: stretch !important;
-  justify-content: flex-start !important;
-  width: ${s.avatarSize}px !important; height: auto !important;
+  position: relative !important; display: block !important;
+  width: ${s.avatarSize}px !important; height: ${s.avatarSize}px !important;
   max-width: none !important; max-height: none !important;
   aspect-ratio: auto !important; overflow: visible !important;
 }
 ${canvas} {
   display: block !important; box-sizing: border-box !important;
-  flex: 0 0 ${s.avatarSize}px !important;
   width: ${s.avatarSize}px !important; height: ${s.avatarSize}px !important;
   max-width: none !important; max-height: none !important;
   border: ${s.borderWidth}px solid ${s.borderColor} !important;
@@ -355,9 +370,10 @@ ${canvas} {
 }
 ${member} > div.relative > div.z-30 {
   display: ${s.showNames ? "block" : "none"} !important;
-  position: static !important; inset: auto !important;
-  flex: none !important; align-self: stretch !important;
-  margin: 5px 0 0 !important;
+  position: absolute !important;
+  top: calc(100% + 5px) !important; right: auto !important;
+  bottom: auto !important; left: 0 !important;
+  margin: 0 !important;
   box-sizing: border-box !important; width: ${s.avatarSize}px !important;
   height: ${s.nameSize + 9}px !important; padding: 2px 4px !important;
   border: 1px solid ${s.borderColor} !important;
