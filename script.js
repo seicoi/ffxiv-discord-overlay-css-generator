@@ -436,18 +436,24 @@ $("preview").addEventListener("click", event => {
   if (speaking.has(index)) speaking.delete(index); else speaking.add(index);
   renderPreview();
 });
+let copyAttempt = 0;
 $("copy-btn").addEventListener("click", async () => {
   if (!validate()) return;
+  const attempt = ++copyAttempt;
+  setStatus("copy-status", "コピー中...");
+  const feedbackPause = new Promise(resolve => setTimeout(resolve, 500));
   const output = $("css-output");
   try {
     if (!navigator.clipboard?.writeText) throw new Error("clipboard-unavailable");
     await navigator.clipboard.writeText(output.value);
-    setStatus("copy-status", "CSSをコピーしました");
+    await feedbackPause;
+    if (attempt === copyAttempt) setStatus("copy-status", "CSSをコピーしました");
   } catch {
     output.focus();
     output.select();
     const done = document.execCommand("copy");
-    setStatus("copy-status", done ? "CSSをコピーしました" : "自動コピーできませんでした。選択されたCSSをCtrl+Cでコピーしてください。");
+    await feedbackPause;
+    if (attempt === copyAttempt) setStatus("copy-status", done ? "CSSをコピーしました" : "自動コピーできませんでした。選択されたCSSをCtrl+Cでコピーしてください。");
   }
 });
 $("save-btn").addEventListener("click", () => saveState("設定を保存しました"));
